@@ -10,9 +10,8 @@ config.resolver.extraNodeModules = {
 // Add custom resolver to handle native-only modules
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   // Handle native-only modules for web platform
-  if (platform === 'web' && moduleName === 'react-native/Libraries/Utilities/codegenNativeCommands') {
+  if (platform === 'web' && moduleName.includes('codegenNativeCommands')) {
     return {
-      filePath: path.resolve(__dirname, 'node_modules/react-native-web/dist/index.js'),
       type: 'empty',
     };
   }
