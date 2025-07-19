@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="TestApp" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>Test Route</name>
+    <trkseg>
+      <trkpt lat="45.4642" lon="9.1900">
+        <ele>120</ele>
+        <time>2024-01-01T10:00:00Z</time>
+      </trkpt>
+      <trkpt lat="45.4700" lon="9.2000">
+        <ele>150</ele>
+        <time>2024-01-01T10:05:00Z</time>
+      </trkpt>
+      <trkpt lat="45.4750" lon="9.2100">
+        <ele>180</ele>
+        <time>2024-01-01T10:10:00Z</time>
+      </trkpt>
+      <trkpt lat="45.4800" lon="9.2200">
+        <ele>200</ele>
+        <time>2024-01-01T10:15:00Z</time>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx> 

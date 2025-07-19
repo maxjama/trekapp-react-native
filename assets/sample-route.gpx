@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="HikingApp" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>Sample Hiking Route</name>
+    <desc>A sample hiking route for testing</desc>
+    <time>2024-01-01T08:00:00Z</time>
+  </metadata>
+  <trk>
+    <name>Mountain Trail</name>
+    <desc>Beautiful mountain hiking trail</desc>
+    <trkseg>
+      <trkpt lat="45.4642" lon="9.1900">
+        <ele>120</ele>
+        <time>2024-01-01T08:00:00Z</time>
+      </trkpt>
+      <trkpt lat="45.4700" lon="9.2000">
+        <ele>150</ele>
+        <time>2024-01-01T08:05:00Z</time>
+      </trkpt>
+      <trkpt lat="45.4750" lon="9.2100">
+        <ele>180</ele>
+        <time>2024-01-01T08:10:00Z</time>
+      </trkpt>
+      <trkpt lat="45.4800" lon="9.2200">
+        <ele>200</ele>
+        <time>2024-01-01T08:15:00Z</time>
+      </trkpt>
+      <trkpt lat="45.4850" lon="9.2300">
+        <ele>220</ele>
+        <time>2024-01-01T08:20:00Z</time>
+      </trkpt>
+      <trkpt lat="45.4900" lon="9.2400">
+        <ele>250</ele>
+        <time>2024-01-01T08:25:00Z</time>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx> 
