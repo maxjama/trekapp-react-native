@@ -1,15 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, MapPin, Calendar, Clock, Users, Camera, Plus } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import MapView, { Marker, Polyline } from 'react-native-maps';
 import * as FileSystem from 'expo-file-system';
 import * as DocumentPicker from 'expo-document-picker';
 import { getFirestore, collection, addDoc } from 'firebase/firestore';
 import { auth } from '../firebaseConfig';
+
+// Conditionally import MapView components only for native platforms
+let MapView: any = null;
+let Marker: any = null;
+let Polyline: any = null;
+
+if (Platform.OS !== 'web') {
+  const MapComponents = require('react-native-maps');
+  MapView = MapComponents.default;
+  Marker = MapComponents.Marker;
+  Polyline = MapComponents.Polyline;
+}
 
 export default function CreateEventScreen() {
   const router = useRouter();
@@ -248,6 +259,11 @@ export default function CreateEventScreen() {
 
   // Funzione per caricare un file GPX semplificata
   const handleLoadGPX = async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert('Feature not available', 'GPX loading is not available on web platform.');
+      return;
+    }
+    
     try {
       const result = await DocumentPicker.getDocumentAsync({ 
         type: '*/*', 
@@ -398,6 +414,11 @@ export default function CreateEventScreen() {
   };
   // Funzione per caricare il GPX di esempio
   const handleLoadSampleGPX = async () => {
+    if (Platform.OS === 'web') {
+      Alert.alert('Feature not available', 'Sample GPX loading is not available on web platform.');
+      return;
+    }
+    
     try {
       // GPX di esempio come stringa
       const sampleGPX = `<?xml version="1.0" encoding="UTF-8"?>
@@ -507,6 +528,11 @@ export default function CreateEventScreen() {
   };
   // Funzione per cancellare l'ultimo punto
   const handleRemoveLastPoint = () => {
+    if (Platform.OS === 'web') {
+      Alert.alert('Feature not available', 'Route editing is not available on web platform.');
+      return;
+    }
+    
     if (routePoints.length > 0) {
       setRoutePoints(routePoints.slice(0, -1));
     }
@@ -571,6 +597,11 @@ export default function CreateEventScreen() {
 
   // Funzione per avviare la navigazione guidata
   const startNavigation = () => {
+    if (Platform.OS === 'web') {
+      Alert.alert('Feature not available', 'Navigation is not available on web platform.');
+      return;
+    }
+    
     if (routePoints.length < 2) {
       Alert.alert('Percorso insufficiente', 'Aggiungi almeno 2 punti per la navigazione.');
       return;
@@ -585,6 +616,10 @@ export default function CreateEventScreen() {
 
   // Funzione per fermare la navigazione
   const stopNavigation = () => {
+    if (Platform.OS === 'web') {
+      return;
+    }
+    
     setNavigationMode(false);
     setCurrentStep(0);
     setUserLocation(null);
@@ -848,270 +883,307 @@ export default function CreateEventScreen() {
         {/* Percorso sulla mappa */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Percorso sulla mappa</Text>
-          
 
-          
-          {/* Mappa */}
-          <View style={{ height: 300, borderRadius: 12, overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: '#E5E7EB', position: 'relative' }}>
-            {/* Controlli di zoom */}
-            <View style={{ 
-              position: 'absolute', 
-              top: 10, 
-              right: 10, 
-              zIndex: 10,
-              backgroundColor: 'rgba(255, 255, 255, 0.9)',
-              borderRadius: 8,
-              padding: 4
-            }}>
-              <TouchableOpacity 
-                style={{ 
-                  backgroundColor: '#FFFFFF', 
-                  width: 40, 
-                  height: 40, 
-                  borderRadius: 8, 
-                  justifyContent: 'center', 
-                  alignItems: 'center',
-                  marginBottom: 4,
-                  borderWidth: 1,
-                  borderColor: '#E5E7EB'
-                }}
-                onPress={() => {
-                  setMapZoom(prev => Math.min(prev + 1, 20));
-                  setMapCenter(prev => ({
-                    ...prev,
-                    latitudeDelta: prev.latitudeDelta * 0.5,
-                    longitudeDelta: prev.longitudeDelta * 0.5
-                  }));
-                }}
-              >
-                <Text style={{ fontSize: 18, fontWeight: '700', color: '#374151' }}>+</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={{ 
-                  backgroundColor: '#FFFFFF', 
-                  width: 40, 
-                  height: 40, 
-                  borderRadius: 8, 
-                  justifyContent: 'center', 
-                  alignItems: 'center',
-                  borderWidth: 1,
-                  borderColor: '#E5E7EB'
-                }}
-                onPress={() => {
-                  setMapZoom(prev => Math.max(prev - 1, 5));
-                  setMapCenter(prev => ({
-                    ...prev,
-                    latitudeDelta: prev.latitudeDelta * 2,
-                    longitudeDelta: prev.longitudeDelta * 2
-                  }));
-                }}
-              >
-                <Text style={{ fontSize: 18, fontWeight: '700', color: '#374151' }}>-</Text>
-              </TouchableOpacity>
-            </View>
-            
-            {/* Indicatore modalità disegno */}
-            {drawingMode && (
-              <View style={{ 
-                position: 'absolute', 
-                top: 10, 
-                left: 10, 
-                zIndex: 10,
-                backgroundColor: '#DC2626',
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 20
-              }}>
-                <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
-                  ✏️ Disegno attivo
-                </Text>
-              </View>
-            )}
-            
-            {/* Pannello di navigazione */}
-            {navigationMode && userLocation && routePoints[currentStep] && (
-              <View style={{ 
-                position: 'absolute', 
-                top: 60, 
-                left: 10, 
-                right: 10, 
-                zIndex: 10,
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                borderRadius: 12,
-                padding: 16,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.25,
-                shadowRadius: 4,
-                elevation: 5
-              }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>
-                    🧭 Navigazione attiva
-                  </Text>
-                  <Text style={{ fontSize: 14, color: '#6B7280' }}>
-                    Passo {currentStep + 1}/{routePoints.length}
-                  </Text>
-                </View>
-                
-                <Text style={{ fontSize: 14, color: '#374151', marginBottom: 8 }}>
-                  {getVoiceDirection(
-                    calculateBearing(userLocation.latitude, userLocation.longitude, routePoints[currentStep].latitude, routePoints[currentStep].longitude),
-                    calculateDistance(userLocation.latitude, userLocation.longitude, routePoints[currentStep].latitude, routePoints[currentStep].longitude)
-                  )}
-                </Text>
-                
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          {Platform.OS !== 'web' ? (
+            <>
+              {/* Mappa */}
+              <View style={{ height: 300, borderRadius: 12, overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: '#E5E7EB', position: 'relative' }}>
+                {/* Controlli di zoom */}
+                <View style={{ 
+                  position: 'absolute', 
+                  top: 10, 
+                  right: 10, 
+                  zIndex: 10,
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  borderRadius: 8,
+                  padding: 4
+                }}>
                   <TouchableOpacity 
                     style={{ 
-                      backgroundColor: '#EF4444', 
-                      paddingHorizontal: 12, 
-                      paddingVertical: 6, 
-                      borderRadius: 6 
+                      backgroundColor: '#FFFFFF', 
+                      width: 40, 
+                      height: 40, 
+                      borderRadius: 8, 
+                      justifyContent: 'center', 
+                      alignItems: 'center',
+                      marginBottom: 4,
+                      borderWidth: 1,
+                      borderColor: '#E5E7EB'
                     }}
-                    onPress={stopNavigation}
+                    onPress={() => {
+                      setMapZoom(prev => Math.min(prev + 1, 20));
+                      setMapCenter(prev => ({
+                        ...prev,
+                        latitudeDelta: prev.latitudeDelta * 0.5,
+                        longitudeDelta: prev.longitudeDelta * 0.5
+                      }));
+                    }}
                   >
-                    <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}>
-                      Ferma
-                    </Text>
+                    <Text style={{ fontSize: 18, fontWeight: '700', color: '#374151' }}>+</Text>
                   </TouchableOpacity>
                   
                   <TouchableOpacity 
                     style={{ 
-                      backgroundColor: '#10B981', 
-                      paddingHorizontal: 12, 
-                      paddingVertical: 6, 
-                      borderRadius: 6 
+                      backgroundColor: '#FFFFFF', 
+                      width: 40, 
+                      height: 40, 
+                      borderRadius: 8, 
+                      justifyContent: 'center', 
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: '#E5E7EB'
                     }}
                     onPress={() => {
-                      if (currentStep < routePoints.length - 1) {
-                        setCurrentStep(currentStep + 1);
-                        simulateUserLocation();
-                      } else {
-                        Alert.alert('Percorso completato!', 'Hai raggiunto la destinazione finale.');
-                        stopNavigation();
-                      }
+                      setMapZoom(prev => Math.max(prev - 1, 5));
+                      setMapCenter(prev => ({
+                        ...prev,
+                        latitudeDelta: prev.latitudeDelta * 2,
+                        longitudeDelta: prev.longitudeDelta * 2
+                      }));
                     }}
                   >
-                    <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}>
-                      Prossimo
+                    <Text style={{ fontSize: 18, fontWeight: '700', color: '#374151' }}>-</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                {/* Indicatore modalità disegno */}
+                {drawingMode && (
+                  <View style={{ 
+                    position: 'absolute', 
+                    top: 10, 
+                    left: 10, 
+                    zIndex: 10,
+                    backgroundColor: '#DC2626',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 20
+                  }}>
+                    <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
+                      ✏️ Disegno attivo
+                    </Text>
+                  </View>
+                )}
+                
+                {/* Pannello di navigazione */}
+                {navigationMode && userLocation && routePoints[currentStep] && (
+                  <View style={{ 
+                    position: 'absolute', 
+                    top: 60, 
+                    left: 10, 
+                    right: 10, 
+                    zIndex: 10,
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    borderRadius: 12,
+                    padding: 16,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 4,
+                    elevation: 5
+                  }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>
+                        🧭 Navigazione attiva
+                      </Text>
+                      <Text style={{ fontSize: 14, color: '#6B7280' }}>
+                        Passo {currentStep + 1}/{routePoints.length}
+                      </Text>
+                    </View>
+                    
+                    <Text style={{ fontSize: 14, color: '#374151', marginBottom: 8 }}>
+                      {getVoiceDirection(
+                        calculateBearing(userLocation.latitude, userLocation.longitude, routePoints[currentStep].latitude, routePoints[currentStep].longitude),
+                        calculateDistance(userLocation.latitude, userLocation.longitude, routePoints[currentStep].latitude, routePoints[currentStep].longitude)
+                      )}
+                    </Text>
+                    
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <TouchableOpacity 
+                        style={{ 
+                          backgroundColor: '#EF4444', 
+                          paddingHorizontal: 12, 
+                          paddingVertical: 6, 
+                          borderRadius: 6 
+                        }}
+                        onPress={stopNavigation}
+                      >
+                        <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}>
+                          Ferma
+                        </Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity 
+                        style={{ 
+                          backgroundColor: '#10B981', 
+                          paddingHorizontal: 12, 
+                          paddingVertical: 6, 
+                          borderRadius: 6 
+                        }}
+                        onPress={() => {
+                          if (currentStep < routePoints.length - 1) {
+                            setCurrentStep(currentStep + 1);
+                            simulateUserLocation();
+                          } else {
+                            Alert.alert('Percorso completato!', 'Hai raggiunto la destinazione finale.');
+                            stopNavigation();
+                          }
+                        }}
+                      >
+                        <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}>
+                          Prossimo
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+                
+                {MapView && (
+                  <MapView
+                    style={{ flex: 1 }}
+                    region={mapCenter}
+                    onPress={handleMapPress}
+                    key={`map-${routePoints.length}-${mapCenter.latitude.toFixed(4)}-${mapType}`}
+                    mapType={mapType}
+                    showsTraffic={false}
+                    showsBuildings={true}
+                    showsIndoors={true}
+                  >
+                    {/* Mostra i punti del percorso */}
+                    {routePoints.map((point, index) => (
+                      <Marker 
+                        key={`point-${index}`} 
+                        coordinate={point}
+                        title={`Punto ${index + 1}`}
+                        description={`${point.latitude.toFixed(4)}, ${point.longitude.toFixed(4)}`}
+                        pinColor={index === 0 ? "#FFFFFF" : index === routePoints.length - 1 ? "#00FF00" : "#FFFF00"}
+                      />
+                    ))}
+                    
+                    {/* Mostra la linea del percorso se ci sono almeno 2 punti */}
+                    {routePoints.length > 1 && (
+                      <Polyline
+                        coordinates={routePoints}
+                        strokeColor="#FFFFFF"
+                        strokeWidth={8}
+                        lineDashPattern={[15, 8]}
+                        zIndex={1}
+                      />
+                    )}
+                    
+                    {/* Marker per la posizione dell'utente in modalità navigazione */}
+                    {navigationMode && userLocation && (
+                      <Marker
+                        coordinate={userLocation}
+                        title="La tua posizione"
+                        description="Sei qui"
+                        pinColor="#3B82F6"
+                      />
+                    )}
+                    
+                    {/* Linea di navigazione verso il prossimo punto */}
+                    {navigationMode && userLocation && routePoints[currentStep] && (
+                      <Polyline
+                        coordinates={[userLocation, routePoints[currentStep]]}
+                        strokeColor="#F59E0B"
+                        strokeWidth={4}
+                        lineDashPattern={[5, 5]}
+                        zIndex={2}
+                      />
+                    )}
+                  </MapView>
+                )}
+              </View>
+              
+              {/* Controlli */}
+              <View style={{ gap: 8 }}>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity 
+                    style={{ 
+                      backgroundColor: '#3B82F6', 
+                      padding: 12, 
+                      borderRadius: 8, 
+                      alignItems: 'center', 
+                      flex: 1 
+                    }} 
+                    onPress={handleLoadGPX}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: '700' }}>
+                      Carica GPX
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={{ 
+                      backgroundColor: '#F59E0B', 
+                      padding: 12, 
+                      borderRadius: 8, 
+                      alignItems: 'center', 
+                      flex: 1 
+                    }} 
+                    onPress={() => {
+                      const types: ('standard' | 'satellite' | 'hybrid')[] = ['standard', 'satellite', 'hybrid'];
+                      const currentIndex = types.indexOf(mapType);
+                      const nextIndex = (currentIndex + 1) % types.length;
+                      setMapType(types[nextIndex]);
+                      Alert.alert('Tipo mappa cambiato', `Mappa ora in modalità: ${types[nextIndex]}`);
+                    }}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: '700' }}>
+                      Cambia mappa
                     </Text>
                   </TouchableOpacity>
                 </View>
+                <TouchableOpacity 
+                  style={{ 
+                    backgroundColor: '#EF4444', 
+                    padding: 12, 
+                    borderRadius: 8, 
+                    alignItems: 'center', 
+                    marginTop: 8
+                  }} 
+                  onPress={() => {
+                    setRoutePoints([]);
+                    Alert.alert('Percorso pulito', 'Tutti i punti del percorso sono stati rimossi.');
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>
+                    Pulisci percorso
+                  </Text>
+                </TouchableOpacity>
               </View>
-            )}
-            <MapView
-              style={{ flex: 1 }}
-              region={mapCenter}
-              onPress={handleMapPress}
-              key={`map-${routePoints.length}-${mapCenter.latitude.toFixed(4)}-${mapType}`} // Forza il re-render quando cambiano i punti, il centro o il tipo
-              mapType={mapType}
-              showsTraffic={false}
-              showsBuildings={true}
-              showsIndoors={true}
-            >
-              {/* Mostra i punti del percorso */}
-              {routePoints.map((point, index) => (
-                <Marker 
-                  key={`point-${index}`} 
-                  coordinate={point}
-                  title={`Punto ${index + 1}`}
-                  description={`${point.latitude.toFixed(4)}, ${point.longitude.toFixed(4)}`}
-                  pinColor={index === 0 ? "#FFFFFF" : index === routePoints.length - 1 ? "#00FF00" : "#FFFF00"}
-                />
-              ))}
-              
-                            {/* Mostra la linea del percorso se ci sono almeno 2 punti */}
-              {routePoints.length > 1 && (
-                <Polyline
-                  coordinates={routePoints}
-                  strokeColor="#FFFFFF"
-                  strokeWidth={8}
-                  lineDashPattern={[15, 8]}
-                  zIndex={1}
-                />
-              )}
-              
-              {/* Marker per la posizione dell'utente in modalità navigazione */}
-              {navigationMode && userLocation && (
-                <Marker
-                  coordinate={userLocation}
-                  title="La tua posizione"
-                  description="Sei qui"
-                  pinColor="#3B82F6"
-                />
-              )}
-              
-              {/* Linea di navigazione verso il prossimo punto */}
-              {navigationMode && userLocation && routePoints[currentStep] && (
-                <Polyline
-                  coordinates={[userLocation, routePoints[currentStep]]}
-                  strokeColor="#F59E0B"
-                  strokeWidth={4}
-                  lineDashPattern={[5, 5]}
-                  zIndex={2}
-                />
-              )}
-            </MapView>
-          </View>
-          
-          {/* Controlli */}
-          <View style={{ gap: 8 }}>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <TouchableOpacity 
-                style={{ 
-                  backgroundColor: '#3B82F6', 
-                  padding: 12, 
-                  borderRadius: 8, 
-                  alignItems: 'center', 
-                  flex: 1 
-                }} 
-                onPress={handleLoadGPX}
-              >
-                <Text style={{ color: '#fff', fontWeight: '700' }}>
-                  Carica GPX
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={{ 
-                  backgroundColor: '#F59E0B', 
-                  padding: 12, 
-                  borderRadius: 8, 
-                  alignItems: 'center', 
-                  flex: 1 
-                }} 
-                onPress={() => {
-                  const types: ('standard' | 'satellite' | 'hybrid')[] = ['standard', 'satellite', 'hybrid'];
-                  const currentIndex = types.indexOf(mapType);
-                  const nextIndex = (currentIndex + 1) % types.length;
-                  setMapType(types[nextIndex]);
-                  Alert.alert('Tipo mappa cambiato', `Mappa ora in modalità: ${types[nextIndex]}`);
-                }}
-              >
-                <Text style={{ color: '#fff', fontWeight: '700' }}>
-                  Cambia mappa
-                </Text>
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity 
-              style={{ 
-                backgroundColor: '#EF4444', 
-                padding: 12, 
-                borderRadius: 8, 
-                alignItems: 'center', 
-                marginTop: 8
-              }} 
-              onPress={() => {
-                setRoutePoints([]);
-                Alert.alert('Percorso pulito', 'Tutti i punti del percorso sono stati rimossi.');
-              }}
-            >
-              <Text style={{ color: '#fff', fontWeight: '700' }}>
-                Pulisci percorso
+            </>
+          ) : (
+            /* Web fallback */
+            <View style={{ 
+              height: 300, 
+              borderRadius: 12, 
+              backgroundColor: '#F3F4F6', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              marginBottom: 16, 
+              borderWidth: 1, 
+              borderColor: '#E5E7EB' 
+            }}>
+              <MapPin size={48} color="#9CA3AF" />
+              <Text style={{ 
+                fontSize: 18, 
+                fontWeight: '600', 
+                color: '#6B7280', 
+                marginTop: 12, 
+                textAlign: 'center' 
+              }}>
+                Map feature not available on web
               </Text>
-            </TouchableOpacity>
-          </View>
+              <Text style={{ 
+                fontSize: 14, 
+                color: '#9CA3AF', 
+                marginTop: 8, 
+                textAlign: 'center',
+                paddingHorizontal: 20
+              }}>
+                Please use the mobile app to access map functionality and route planning
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 
